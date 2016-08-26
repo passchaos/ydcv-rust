@@ -43,9 +43,9 @@ fn main() {
     };
 
     let mut body = String::new();
-    res.read_to_string(&mut body).unwrap();
+    res.read_to_string(&mut body).expect("网络响应中没有字符段");
 
-    let trans_result: trans_type::Translation = serde_json::from_str(body.as_str()).unwrap();
+    let trans_result: trans_type::Translation = serde_json::from_str(body.as_str()).expect("需要更新本地json格式处理");
 
     println!("{}", trans_result);
 }

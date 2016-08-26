@@ -1,0 +1,10 @@
+[package]
+name = "ydcv"
+version = "0.1.0"
+authors = ["passchaos"]
+
+[dependencies]
+hyper = "0.9"
+serde = "0.8"
+serde_json = "0.8"
+serde_macros = "0.8"

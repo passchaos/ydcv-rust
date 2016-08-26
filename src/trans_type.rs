@@ -3,10 +3,11 @@ use std::fmt::{self, Formatter, Display};
 #[derive(Debug, Serialize, Deserialize)]
 struct Basic {
     explains: Vec<String>,
+    phonetic: String,
     #[serde(rename="uk-phonetic")]
-    uk_phonetic: String,
+    uk_phonetic: Option<String>,
     #[serde(rename="us-phonetic")]
-    us_phonetic: String,
+    us_phonetic: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,8 +36,16 @@ impl Display for Reference {
 
 impl Display for Basic {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "\tUK: [{}] US: [{}]\n\n  Word Explanation:{}",
-               self.uk_phonetic, self.us_phonetic, self.explains
+        let mut tmp_str = format!("[{}]", self.phonetic);
+
+        if let Some(ref uk) = self.uk_phonetic {
+            if let Some(ref us) = self.us_phonetic {
+                tmp_str = format!("UK: [{}] US: [{}]", uk, us);
+            }
+        }
+        
+        write!(f, "\t{}\n\n  Word Explanation:{}",
+               tmp_str, self.explains
                .iter()
                .fold(String::new(), |mut acc, ref x| {
                    acc.push_str(format!("\n\t* {}", x).as_str());

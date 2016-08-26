@@ -35,7 +35,7 @@ impl Display for Reference {
 
 impl Display for Basic {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "\tUK: [{}] US: [{}]\n  Word Explanation:{}",
+        write!(f, "\tUK: [{}] US: [{}]\n\n  Word Explanation:{}",
                self.uk_phonetic, self.us_phonetic, self.explains
                .iter()
                .fold(String::new(), |mut acc, ref x| {

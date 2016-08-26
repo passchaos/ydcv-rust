@@ -32,7 +32,13 @@ fn main() {
 
     let client = Client::new();
 
-    let mut res = client.get(&request_url).header(Connection::close()).send().unwrap();
+    let mut res = match client.get(&request_url).header(Connection::close()).send() {
+        Ok(noun) => noun,
+        Err(err) => {
+            println!("网络错误，请稍候重试！ {}", err);
+            return
+        }
+    };
 
     let mut body = String::new();
     res.read_to_string(&mut body).unwrap();

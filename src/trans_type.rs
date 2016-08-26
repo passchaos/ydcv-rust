@@ -24,7 +24,7 @@ pub struct Translation {
     translation: Vec<String>,
     query: String,
     basic: Option<Basic>,
-    web: Vec<Reference>,
+    web: Option<Vec<Reference>>,
 }
 
 const HEADER_COLOR: Colour = RGB(26, 159, 160);
@@ -66,20 +66,25 @@ impl Display for Basic {
 
 impl Display for Translation {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let content = self.web
-               .iter()
-               .fold(String::new(), |mut acc, ref x| {
-                   acc.push_str(format!("{}", x).as_str());
-                   acc
-               });
-
-        let tmp_str = match self.basic {
+        let tmp_basic = match self.basic {
             Some(ref bsc) => format!("\n{}\n", bsc),
             None => String::new(),
         };
+
+        let tmp_web = match self.web {
+            Some(ref vecs) => {
+                let content = vecs.iter()
+                    .fold(String::new(), |mut acc, ref x| {
+                        acc.push_str(format!("{}", x).as_str());
+                        acc
+                    });
+                format!("\n  {}:{}", HEADER_COLOR.paint("Web Reference"), content)
+            }
+            None => String::new(),
+        };
         
-        write!(f, "{}:\n\t{}{}\n  {}:{}",
-               Style::new().underline().paint(self.query.clone()), self.translation.first().expect(""),
-               tmp_str, HEADER_COLOR.paint("Web Reference"), content)
+        write!(f, "{}:\n  {}\n\t{}{}{}",
+               Style::new().underline().paint(self.query.clone()), HEADER_COLOR.paint("Translation:"), self.translation.first().expect(""),
+               tmp_basic, tmp_web)
     }
 }

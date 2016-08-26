@@ -28,7 +28,7 @@ fn main() {
     
     let mut request_url = trans_type::REQUEST_BASE.to_string();
 
-    request_url.push_str(&*arg);
+    request_url.push_str(arg.as_str());
 
     let client = Client::new();
 
@@ -37,13 +37,13 @@ fn main() {
     let mut body = String::new();
     res.read_to_string(&mut body).unwrap();
 
-    let trans_result: trans_type::Translation = serde_json::from_str(&*body).unwrap();
+    let trans_result: trans_type::Translation = serde_json::from_str(body.as_str()).unwrap();
 
     println!("trans basic: {:?}\n webs: {:?}", trans_result.basic, trans_result.web);
     println!("explains: {}", trans_result.basic.explains
              .iter()
              .fold(String::new(), |mut acc, ref x| {
-                 acc.push_str(&*format!("\n\t* {}", x));
+                 acc.push_str(format!("\n\t* {}", x).as_str());
                  acc
              }));
 

@@ -1,6 +1,9 @@
 use std::fmt::{self, Formatter, Display};
 
-#[derive(Debug, Serialize, Deserialize)]
+use ansi_term::Colour::{self, RGB};
+use ansi_term::Style;
+
+#[derive(Debug, Deserialize)]
 struct Basic {
     explains: Vec<String>,
     phonetic: String,
@@ -10,13 +13,13 @@ struct Basic {
     us_phonetic: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Reference {
     key: String,
     value: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Translation {
     translation: Vec<String>,
     query: String,
@@ -24,28 +27,30 @@ pub struct Translation {
     web: Vec<Reference>,
 }
 
+const HEADER_COLOR: Colour = RGB(26, 159, 160);
+const PHONETIC_COLOR: Colour = RGB(220, 186, 40);
+const REFERENCE_COLOR: Colour = RGB(138, 88, 164);
+
 impl Display for Reference {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "\n\t* {}\n\t  {}", self.key, self.value.iter()
-               .fold(String::new(), |mut acc, ref x| {
-                   acc.push_str(x);
-                   acc
-               }))
+        let content = self.value.iter().fold(String::new(), |mut acc, ref x| {
+            acc.push_str(format!("{}; ", x).as_str());
+            acc
+        });
+        write!(f, "\n\t* {}\n\t  {}", self.key, REFERENCE_COLOR.paint(content))
     }
 }
 
 impl Display for Basic {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let mut tmp_str = format!("[{}]", self.phonetic);
+        let mut tmp_str = format!("[{}]", PHONETIC_COLOR.paint(self.phonetic.clone()));
 
-        if let Some(ref uk) = self.uk_phonetic {
-            if let Some(ref us) = self.us_phonetic {
-                tmp_str = format!("UK: [{}] US: [{}]", uk, us);
-            }
+        if self.uk_phonetic.is_some() && self.us_phonetic.is_some() {
+            tmp_str = format!("UK: [{}] US: [{}]", PHONETIC_COLOR.paint(self.uk_phonetic.clone().unwrap()), PHONETIC_COLOR.paint(self.us_phonetic.clone().unwrap()));
         }
         
-        write!(f, "\t{}\n\n  Word Explanation:{}",
-               tmp_str, self.explains
+        write!(f, "\t{}\n\n  {}:{}",
+               tmp_str, HEADER_COLOR.paint("Word Explanation"), self.explains
                .iter()
                .fold(String::new(), |mut acc, ref x| {
                    acc.push_str(format!("\n\t* {}", x).as_str());
@@ -56,12 +61,15 @@ impl Display for Basic {
 
 impl Display for Translation {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{}:\n\t{}\n{}\n\n  Web Reference:{}",
-               self.query, self.translation.first().expect(""), self.basic, self.web
+        let content = self.web
                .iter()
                .fold(String::new(), |mut acc, ref x| {
                    acc.push_str(format!("{}", x).as_str());
                    acc
-               }))
+               });
+        
+        write!(f, "{}:\n\t{}\n{}\n\n  {}:{}",
+               Style::new().underline().paint(self.query.clone()), self.translation.first().expect(""),
+               self.basic, HEADER_COLOR.paint("Web Reference"), content)
     }
 }

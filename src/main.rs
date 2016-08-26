@@ -4,6 +4,8 @@
 extern crate hyper;
 extern crate serde_json;
 
+extern crate ansi_term;
+
 mod trans_type;
 
 use std::io::Read;

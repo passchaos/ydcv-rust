@@ -6,7 +6,7 @@ use ansi_term::Style;
 #[derive(Debug, Deserialize)]
 struct Basic {
     explains: Vec<String>,
-    phonetic: String,
+    phonetic: Option<String>,
     #[serde(rename="uk-phonetic")]
     uk_phonetic: Option<String>,
     #[serde(rename="us-phonetic")]
@@ -23,7 +23,7 @@ struct Reference {
 pub struct Translation {
     translation: Vec<String>,
     query: String,
-    basic: Basic,
+    basic: Option<Basic>,
     web: Vec<Reference>,
 }
 
@@ -43,13 +43,18 @@ impl Display for Reference {
 
 impl Display for Basic {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let mut tmp_str = format!("[{}]", PHONETIC_COLOR.paint(self.phonetic.clone()));
+        let mut tmp_str = String::new();
+
+        if let Some(ref phone) = self.phonetic {
+            tmp_str = format!("\t[{}]\n", PHONETIC_COLOR.paint(phone.clone()));            
+        }
+
 
         if self.uk_phonetic.is_some() && self.us_phonetic.is_some() {
-            tmp_str = format!("UK: [{}] US: [{}]", PHONETIC_COLOR.paint(self.uk_phonetic.clone().unwrap()), PHONETIC_COLOR.paint(self.us_phonetic.clone().unwrap()));
+            tmp_str = format!("\tUK: [{}] US: [{}]\n", PHONETIC_COLOR.paint(self.uk_phonetic.clone().unwrap()), PHONETIC_COLOR.paint(self.us_phonetic.clone().unwrap()));
         }
-        
-        write!(f, "\t{}\n\n  {}:{}",
+
+        write!(f, "{}\n  {}:{}",
                tmp_str, HEADER_COLOR.paint("Word Explanation"), self.explains
                .iter()
                .fold(String::new(), |mut acc, ref x| {
@@ -67,9 +72,14 @@ impl Display for Translation {
                    acc.push_str(format!("{}", x).as_str());
                    acc
                });
+
+        let tmp_str = match self.basic {
+            Some(ref bsc) => format!("\n{}\n", bsc),
+            None => String::new(),
+        };
         
-        write!(f, "{}:\n\t{}\n{}\n\n  {}:{}",
+        write!(f, "{}:\n\t{}{}\n  {}:{}",
                Style::new().underline().paint(self.query.clone()), self.translation.first().expect(""),
-               self.basic, HEADER_COLOR.paint("Web Reference"), content)
+               tmp_str, HEADER_COLOR.paint("Web Reference"), content)
     }
 }

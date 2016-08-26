@@ -11,9 +11,9 @@ use std::io::Read;
 use hyper::Client;
 use hyper::header::Connection;
 
-use serde_json::Value;
-
 use std::env;
+
+const REQUEST_BASE: &'static str = "http://fanyi.youdao.com/openapi.do?keyfrom=ydcv-rust&key=379421805&type=data&doctype=json&version=1.1&q=";
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -26,7 +26,7 @@ fn main() {
         }
     };
     
-    let mut request_url = trans_type::REQUEST_BASE.to_string();
+    let mut request_url = REQUEST_BASE.to_string();
 
     request_url.push_str(arg.as_str());
 
@@ -39,18 +39,5 @@ fn main() {
 
     let trans_result: trans_type::Translation = serde_json::from_str(body.as_str()).unwrap();
 
-    println!("trans basic: {:?}\n webs: {:?}", trans_result.basic, trans_result.web);
-    println!("explains: {}", trans_result.basic.explains
-             .iter()
-             .fold(String::new(), |mut acc, ref x| {
-                 acc.push_str(format!("\n\t* {}", x).as_str());
-                 acc
-             }));
-
-    // println!("webs: {}", trans_result.web
-    //          .iter()
-    //          .fold(String::new(), |mut acc, ref x| {
-    //              acc.push_str(&*format!("\n\t* {}", x.key, x.va));
-    //              acc
-    //          }));
+    println!("{}", trans_result);
 }

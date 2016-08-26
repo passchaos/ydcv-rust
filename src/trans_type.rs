@@ -1,8 +1,8 @@
-pub const REQUEST_BASE: &'static str = "http://fanyi.youdao.com/openapi.do?keyfrom=ydcv-rust&key=379421805&type=data&doctype=json&version=1.1&q=";
+use std::fmt::{self, Formatter, Display};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Basic {
-    pub explains: Vec<String>,
+struct Basic {
+    explains: Vec<String>,
     #[serde(rename="uk-phonetic")]
     uk_phonetic: String,
     #[serde(rename="us-phonetic")]
@@ -10,13 +10,49 @@ pub struct Basic {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Reference {
+struct Reference {
     key: String,
     value: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Translation {
-    pub basic: Basic,
-    pub web: Vec<Reference>,
+    translation: Vec<String>,
+    query: String,
+    basic: Basic,
+    web: Vec<Reference>,
+}
+
+impl Display for Reference {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "\n\t* {}\n\t  {}", self.key, self.value.iter()
+               .fold(String::new(), |mut acc, ref x| {
+                   acc.push_str(x);
+                   acc
+               }))
+    }
+}
+
+impl Display for Basic {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "\tUK: [{}] US: [{}]\n  Word Explanation:{}",
+               self.uk_phonetic, self.us_phonetic, self.explains
+               .iter()
+               .fold(String::new(), |mut acc, ref x| {
+                   acc.push_str(format!("\n\t* {}", x).as_str());
+                   acc
+               }))
+    }
+}
+
+impl Display for Translation {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}:\n\t{}\n{}\n\n  Web Reference:{}",
+               self.query, self.translation.first().expect(""), self.basic, self.web
+               .iter()
+               .fold(String::new(), |mut acc, ref x| {
+                   acc.push_str(format!("{}", x).as_str());
+                   acc
+               }))
+    }
 }

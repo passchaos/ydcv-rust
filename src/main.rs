@@ -33,20 +33,12 @@ fn main() {
     };
 
     let mut db = rocksdb::DB::open_default("/home/passchaos/.cache/ydcv/cache").unwrap();
-    // db.put(b"terminal", b"终端");
 
     let db_key = arg.as_bytes();
     if let Ok(Some(value)) = db.get(db_key) {
         println!("{}", value.to_utf8().unwrap());
         return
     }
-    //     Ok(Some(value)) => {
-
-    //     },
-    //     _ => 
-    //     Ok(None) => println!("value not found"),
-    //     Err(e) => println!("operational probleme encountered: {}", e),
-    // }
     
     let mut request_url = REQUEST_BASE.to_string();
 

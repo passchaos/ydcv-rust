@@ -6,6 +6,8 @@ extern crate serde_json;
 
 extern crate ansi_term;
 
+extern crate rocksdb;
+
 mod trans_type;
 
 use std::io::Read;
@@ -14,6 +16,8 @@ use hyper::Client;
 use hyper::header::Connection;
 
 use std::env;
+
+use rocksdb::Writable;
 
 const REQUEST_BASE: &'static str = "http://fanyi.youdao.com/openapi.do?keyfrom=ydcv-rust&key=379421805&type=data&doctype=json&version=1.1&q=";
 
@@ -27,6 +31,22 @@ fn main() {
             return;
         }
     };
+
+    let mut db = rocksdb::DB::open_default("/home/passchaos/.cache/ydcv/cache").unwrap();
+    // db.put(b"terminal", b"终端");
+
+    let db_key = arg.as_bytes();
+    if let Ok(Some(value)) = db.get(db_key) {
+        println!("{}", value.to_utf8().unwrap());
+        return
+    }
+    //     Ok(Some(value)) => {
+
+    //     },
+    //     _ => 
+    //     Ok(None) => println!("value not found"),
+    //     Err(e) => println!("operational probleme encountered: {}", e),
+    // }
     
     let mut request_url = REQUEST_BASE.to_string();
 
@@ -46,6 +66,6 @@ fn main() {
     res.read_to_string(&mut body).expect("网络响应中没有字符段");
 
     let trans_result: trans_type::Translation = serde_json::from_str(body.as_str()).expect("需要更新本地json格式处理");
-
+    db.put(db_key, format!("{}", trans_result).as_bytes());
     println!("{}", trans_result);
 }

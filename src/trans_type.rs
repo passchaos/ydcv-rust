@@ -83,7 +83,7 @@ impl Display for Translation {
             None => String::new(),
         };
         
-        write!(f, "{}:\n  {}\n\t{}{}{}",
+        write!(f, "{}:\n  {}\n\t* {}{}{}",
                Style::new().underline().paint(self.query.clone()), HEADER_COLOR.paint("Translation:"), self.translation.first().expect(""),
                tmp_basic, tmp_web)
     }

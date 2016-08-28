@@ -55,7 +55,7 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool) -
 
     if update_cache {
         debug!("更新本地缓存");
-        let mut batch = WriteBatch::default();
+        let batch = WriteBatch::default();
         batch.delete(query.as_bytes());
         batch.put(query.as_bytes(), format!("{}", trans_result).as_bytes());
         cache_db.write(batch);
@@ -119,7 +119,7 @@ fn main() {
         }
     };
 
-    let mut cache_path = match env::home_dir().map(|mut path| {
+    let cache_path = match env::home_dir().map(|mut path| {
         path.push(".cache/ydcv/cache");
         path
     }).and_then(|path| {

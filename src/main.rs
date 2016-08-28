@@ -119,7 +119,26 @@ fn main() {
         }
     };
 
-    let db = DB::open_default("/home/passchaos/.cache/ydcv/cache").unwrap();
+    let mut cache_path = match env::home_dir().map(|mut path| {
+        path.push(".cache/ydcv/cache");
+        path
+    }).and_then(|path| {
+        path.to_str().map(|str| str.to_string())
+    }) {
+        Some(path) => path,
+        None => {
+            println!("没有缓存路径");
+            return;
+        },
+    };
+
+    let db = match DB::open_default(cache_path.as_str()) {
+        Ok(db) => db,
+        Err(err) => {
+            println!("无法创建RocksDB的存储目录 error: {}", err);
+            return;
+        }
+    };
 
     let db_key = output.as_bytes();
 

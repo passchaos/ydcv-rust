@@ -16,7 +16,8 @@ struct Basic {
 #[derive(Debug, Deserialize)]
 struct Reference {
     key: String,
-    value: Vec<String>,
+    #[serde(rename="value")]
+    contents: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -33,10 +34,17 @@ const REFERENCE_COLOR: Colour = RGB(138, 88, 164);
 
 impl Display for Reference {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let content = self.value.iter().fold(String::new(), |mut acc, ref x| {
-            acc.push_str(format!("{}; ", x).as_str());
-            acc
-        });
+        let mut content = String::new();
+        let sub_str_count = self.contents.len();
+
+        for (index, str) in self.contents.iter().enumerate() {
+            content.push_str(str);
+            
+            if index < sub_str_count - 1 {
+                content.push_str("; ")
+            }
+        }
+
         write!(f, "\n\t* {}\n\t  {}", self.key, REFERENCE_COLOR.paint(content))
     }
 }

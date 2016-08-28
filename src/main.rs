@@ -50,7 +50,10 @@ fn get_remote_json_translation(query: &str, cache_db: &DB) -> Result<String, Str
     let trans_result: trans_type::Translation = serde_json::from_str(body.as_str()).expect("需要更新本地json格式处理");
 
     info!("将 「{}」 的翻译结果写入缓存", query);
-    cache_db.put(query.as_bytes(), format!("{}", trans_result).as_bytes());
+    match cache_db.put(query.as_bytes(), format!("{}", trans_result).as_bytes()) {
+        Err(err) => info!("{}", err),
+        _ => {},        
+    };
     
     Ok(format!("{}", trans_result))
 }

@@ -22,7 +22,7 @@ struct Reference {
 
 #[derive(Debug, Deserialize)]
 pub struct Translation {
-    translation: Vec<String>,
+    translation: Option<Vec<String>>,
     query: String,
     basic: Option<Basic>,
     web: Option<Vec<Reference>>,
@@ -74,6 +74,11 @@ impl Display for Basic {
 
 impl Display for Translation {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        let tmp_trans = match self.translation {
+            Some(ref trans) => format!("\n  {}\n\t* {}", HEADER_COLOR.paint("Translation:"), trans.first().expect("")),
+            None => String::new(),
+        };
+        
         let tmp_basic = match self.basic {
             Some(ref bsc) => format!("\n{}\n", bsc),
             None => String::new(),
@@ -91,8 +96,7 @@ impl Display for Translation {
             None => String::new(),
         };
         
-        write!(f, "{}:\n  {}\n\t* {}{}{}",
-               Style::new().underline().paint(self.query.clone()), HEADER_COLOR.paint("Translation:"), self.translation.first().expect(""),
-               tmp_basic, tmp_web)
+        write!(f, "{}:{}{}{}",
+               Style::new().underline().paint(self.query.clone()), tmp_trans, tmp_basic, tmp_web)
     }
 }

@@ -80,14 +80,14 @@ fn main() {
     
     let args: Vec<String> = env::args().collect();
 
-    let program = args[0].clone();
+    let program = &args[0];
 
     let mut opts = Options::new();
     opts.optopt("u", "update", "更新本地缓存中对应的数据", "WORD");
     opts.optflag("h", "help", "print this help menu");
 
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => {m}
+        Ok(m) => m,
         Err(f) => {
             debug!("{}", f.to_string());
             print_usage(&program, opts);

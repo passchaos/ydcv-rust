@@ -58,8 +58,11 @@ impl Display for Basic {
         }
 
 
-        if self.uk_phonetic.is_some() && self.us_phonetic.is_some() {
-            tmp_str = format!("\tUK: [{}] US: [{}]\n", PHONETIC_COLOR.paint(self.uk_phonetic.clone().unwrap()), PHONETIC_COLOR.paint(self.us_phonetic.clone().unwrap()));
+        // if self.uk_phonetic.is_some() && self.us_phonetic.is_some() {
+        //     tmp_str = format!("\tUK: [{}] US: [{}]\n", PHONETIC_COLOR.paint(self.uk_phonetic.clone().unwrap()), PHONETIC_COLOR.paint(self.us_phonetic.clone().unwrap()));
+        // }
+        if let (Some(uk), Some(us)) = (self.uk_phonetic.clone(), self.us_phonetic.clone()) {
+            tmp_str = format!("\tUK: [{}] US: [{}]\n", PHONETIC_COLOR.paint(uk), PHONETIC_COLOR.paint(us));
         }
 
         write!(f, "{}\n  {}:{}",

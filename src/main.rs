@@ -16,7 +16,9 @@ extern crate env_logger;
 
 mod trans_type;
 
-use std::io::Read;
+use std::error;
+
+use std::io::{self, Read};
 
 use hyper::Client;
 use hyper::header::Connection;
@@ -30,14 +32,36 @@ use rocksdb::{DB, Writable, WriteBatch};
 
 #[derive(Debug)]
 enum YDCVError {
-    Network,
-    Json,
-    Cache,
+    Io(io::Error),
+    Network(hyper::Error),
+    Json(serde_json::Error),
+    Cache(String),
+}
+
+impl From<io::Error> for YDCVError {
+    fn from(err: io::Error) -> YDCVError {
+        YDCVError::Io(err)
+    }
+}
+impl From<hyper::Error> for YDCVError {
+    fn from(err: hyper::Error) -> YDCVError {
+        YDCVError::Network(err)
+    }
+}
+impl From<serde_json::Error> for YDCVError {
+    fn from(err: serde_json::Error) -> YDCVError {
+        YDCVError::Json(err)
+    }
+}
+impl From<String> for YDCVError {
+    fn from(err: String) -> YDCVError {
+        YDCVError::Cache(err)
+    }
 }
 
 const REQUEST_BASE: &'static str = "http://fanyi.youdao.com/openapi.do?keyfrom=ydcv-rust&key=379421805&type=data&doctype=json&version=1.1&q=";
 
-fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool) -> Result<String, String> {
+fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool) -> Result<String, YDCVError> {
     let mut request_url = REQUEST_BASE.to_string();
 
     request_url.push_str(query);
@@ -46,14 +70,14 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool) -
 
     info!("开始从网络获取翻译结果");
 
-    let mut res = try!(client.get(&request_url).header(Connection::close()).send().map_err(|e| e.to_string()));
+    let mut res = try!(client.get(&request_url).header(Connection::close()).send());
 
     let mut body = String::new();
-    try!(res.read_to_string(&mut body).map_err(|e| e.to_string()));
+    try!(res.read_to_string(&mut body));
 
     debug!("json content: {}", body);
 
-    let trans_result: trans_type::Translation = try!(serde_json::from_str(body.as_str()).map_err(|e| e.to_string()));
+    let trans_result: trans_type::Translation = try!(serde_json::from_str(body.as_str()));
 
     if update_cache {
         debug!("更新本地缓存");
@@ -148,7 +172,7 @@ fn main() {
         },
         _ => {
             let translation = get_remote_json_translation(output.as_str(), &db, update_local_tag);
-            println!("{}", translation.unwrap_or("网络出错".to_string()));
+            println!("{:?}", translation);
         }
     }
 }

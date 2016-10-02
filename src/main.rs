@@ -1,7 +1,9 @@
-#![feature(custom_derive, plugin)]
-#![plugin(serde_macros)]
+#![feature(rustc_macro)]
 
 extern crate hyper;
+
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
 
 extern crate ansi_term;

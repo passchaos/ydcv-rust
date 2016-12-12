@@ -7,7 +7,6 @@ authors = ["passchaos"]
 hyper = "*"
 serde = "*"
 serde_json = "*"
-serde_macros = "*"
 serde_derive = "*"
 ansi_term = "*"
 rocksdb = "*"

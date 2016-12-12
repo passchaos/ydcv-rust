@@ -30,7 +30,8 @@ use getopts::Options;
 use std::env;
 use std::str;
 
-use rocksdb::{DB, Writable, WriteBatch};
+use rocksdb::DB;
+use rocksdb::WriteBatch;
 
 #[derive(Debug)]
 enum YDCVError {
@@ -38,6 +39,7 @@ enum YDCVError {
     Network(hyper::Error),
     Json(serde_json::Error),
     Cache(String),
+    Rocksdb(rocksdb::Error),
 }
 
 impl From<io::Error> for YDCVError {
@@ -58,6 +60,11 @@ impl From<serde_json::Error> for YDCVError {
 impl From<String> for YDCVError {
     fn from(err: String) -> YDCVError {
         YDCVError::Cache(err)
+    }
+}
+impl From<rocksdb::Error> for YDCVError {
+    fn from(err: rocksdb::Error) -> YDCVError {
+        YDCVError::Rocksdb(err)
     }
 }
 
@@ -83,7 +90,7 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool) -
 
     if update_cache {
         debug!("更新本地缓存");
-        let batch = WriteBatch::default();
+        let mut batch = WriteBatch::default();
         batch.delete(query.as_bytes());
         batch.put(query.as_bytes(), format!("{}", trans_result).as_bytes());
         cache_db.write(batch);

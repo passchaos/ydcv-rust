@@ -5,6 +5,10 @@ use ansi_term::Style;
 
 use formatter::YDCVFormatter;
 
+use slog;
+use slog::DrainExt;
+use slog_term;
+
 #[derive(Debug, Deserialize)]
 struct Basic {
     explains: Vec<String>,
@@ -22,19 +26,28 @@ struct Reference {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct Translation {
+pub struct Translation<'a> {
     translation: Option<Vec<String>>,
     query: String,
     basic: Option<Basic>,
     web: Option<Vec<Reference>>,
+    #[serde(skip_deserializing)]
+    pub logger: Option<&'a slog::Logger>,
 }
 
-impl YDCVFormatter for Translation {
+impl<'a> YDCVFormatter for Translation<'a> {
     fn translation_description(&self) -> String {
         let yellow_star = Colour::Yellow.paint("*");
+
+        if let Some(ref logger) = self.logger {
+            slog_info!(logger, "yellow_star: {}", yellow_star);
+        };
         let mut header_str = String::new();
         if let Some(ref translations) = self.translation {
             header_str.push_str(&format!("  {}\n\t{} ", Colour::Purple.paint("Translation:"), yellow_star));
+            if let Some(ref logger) = self.logger {
+                slog_info!(logger, "current header_str: {}", header_str);
+            };
             for (idx, value) in translations.iter().enumerate() {
                 header_str.push_str(&value);
                 if idx == translations.len() - 1 {

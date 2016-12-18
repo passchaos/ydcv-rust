@@ -55,7 +55,8 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, l
 
     slog_debug!(logger, "json content: {}", body);
 
-    let trans_result: trans_type::Translation = try!(serde_json::from_str(body.as_str()));
+    let mut trans_result: trans_type::Translation = try!(serde_json::from_str(body.as_str()));
+    trans_result.logger = Some(logger);
 
     if update_cache {
         slog_debug!(logger, "更新本地缓存");
@@ -74,7 +75,7 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, l
 fn main() {
     slog_envlogger::init().unwrap();
     let drain = slog_term::streamer().compact().build().fuse();
-    let root_log = slog::Logger::root(drain, o!("version" => "0.2"));
+    let root_log = slog::Logger::root(drain, o!("version" => "0.3.0"));
 
     let matches = App::new("YDCV")
         .version("0.3.0")

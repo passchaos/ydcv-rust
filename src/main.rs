@@ -11,8 +11,7 @@ extern crate ansi_term;
 extern crate rocksdb;
 extern crate clap;
 
-// #[macro_use(o, slog_log, slog_trace, slog_debug, slog_info, slog_warn, slog_error)]
-#[macro_use]
+#[macro_use(o, slog_log, slog_trace, slog_debug, slog_info, slog_warn, slog_error)]
 extern crate slog;
 extern crate slog_term;
 // #[macro_use]
@@ -20,8 +19,6 @@ extern crate slog_term;
 extern crate slog_envlogger;
 
 mod trans_type;
-
-use std::error;
 
 use std::io::{self, Read};
 
@@ -46,25 +43,25 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, l
 
     let client = Client::new();
 
-    debug!(logger, "开始从网络获取翻译结果");
+    slog_debug!(logger, "开始从网络获取翻译结果");
 
     let mut res = try!(client.get(&request_url).header(Connection::close()).send());
 
     let mut body = String::new();
     try!(res.read_to_string(&mut body));
 
-    debug!(logger, "json content: {}", body);
+    slog_debug!(logger, "json content: {}", body);
 
     let trans_result: trans_type::Translation = try!(serde_json::from_str(body.as_str()));
 
     if update_cache {
-        debug!(logger, "更新本地缓存");
+        slog_debug!(logger, "更新本地缓存");
         let mut batch = WriteBatch::default();
         batch.delete(query.as_bytes());
         batch.put(query.as_bytes(), format!("{}", trans_result).as_bytes());
         cache_db.write(batch);
     } else {
-        debug!(logger, "写入本地缓存");
+        slog_debug!(logger, "写入本地缓存");
         try!(cache_db.put(query.as_bytes(), format!("{}", trans_result).as_bytes()));
     }
 
@@ -85,7 +82,7 @@ fn main() {
         .get_matches();
 
     let trans = matches.value_of("INPUT").unwrap();
-    info!(root_log, "trans: {}", trans);
+    slog_info!(root_log, "trans: {}", trans);
 
     // 更新标记，是否更新本地缓存中的翻译结果
     let update_local_tag = matches.is_present("update");
@@ -102,7 +99,7 @@ fn main() {
             return;
         },
     };
-    debug!(root_log, "cache path: {}", cache_path);
+    slog_debug!(root_log, "cache path: {}", cache_path);
 
     let db = match DB::open_default(cache_path.as_str()) {
         Ok(db) => db,
@@ -116,12 +113,13 @@ fn main() {
 
     match db.get(db_key) {
         Ok(Some(ref value)) if !update_local_tag => {
-            info!(root_log, "从本地缓存读取");
+            slog_info!(root_log, "从本地缓存读取");
             println!("{}", value.to_utf8().unwrap());
         },
         _ => {
-            let translation = get_remote_json_translation(trans, &db, update_local_tag, &root_log);
-            println!("{:?}", translation);
+            if let Some(translation) = get_remote_json_translation(trans, &db, update_local_tag, &root_log).ok() {
+                println!("{}", translation);
+            }
         }
     }
 }

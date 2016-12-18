@@ -39,7 +39,7 @@ impl Display for Reference {
 
         for (index, str) in self.contents.iter().enumerate() {
             content.push_str(str);
-            
+
             if index < sub_str_count - 1 {
                 content.push_str("; ")
             }
@@ -54,13 +54,9 @@ impl Display for Basic {
         let mut tmp_str = String::new();
 
         if let Some(ref phone) = self.phonetic {
-            tmp_str = format!("\t[{}]\n", PHONETIC_COLOR.paint(phone.clone()));            
+            tmp_str = format!("\t[{}]\n", PHONETIC_COLOR.paint(phone.clone()));
         }
 
-
-        // if self.uk_phonetic.is_some() && self.us_phonetic.is_some() {
-        //     tmp_str = format!("\tUK: [{}] US: [{}]\n", PHONETIC_COLOR.paint(self.uk_phonetic.clone().unwrap()), PHONETIC_COLOR.paint(self.us_phonetic.clone().unwrap()));
-        // }
         if let (Some(uk), Some(us)) = (self.uk_phonetic.clone(), self.us_phonetic.clone()) {
             tmp_str = format!("\tUK: [{}] US: [{}]\n", PHONETIC_COLOR.paint(uk), PHONETIC_COLOR.paint(us));
         }
@@ -81,7 +77,7 @@ impl Display for Translation {
             Some(ref trans) => format!("\n  {}\n\t* {}", HEADER_COLOR.paint("Translation:"), trans.first().expect("")),
             None => String::new(),
         };
-        
+
         let tmp_basic = match self.basic {
             Some(ref bsc) => format!("\n{}\n", bsc),
             None => String::new(),
@@ -98,7 +94,7 @@ impl Display for Translation {
             }
             None => String::new(),
         };
-        
+
         write!(f, "{}:{}{}{}",
                Style::new().underline().paint(self.query.clone()), tmp_trans, tmp_basic, tmp_web)
     }

@@ -3,10 +3,11 @@ use std::fmt::{self, Formatter, Display};
 use ansi_term::Colour::{self, RGB};
 use ansi_term::Style;
 
+use formatter::YDCVFormatter;
+
 #[derive(Debug, Deserialize)]
 struct Basic {
     explains: Vec<String>,
-    phonetic: Option<String>,
     #[serde(rename="uk-phonetic")]
     uk_phonetic: Option<String>,
     #[serde(rename="us-phonetic")]
@@ -28,74 +29,65 @@ pub struct Translation {
     web: Option<Vec<Reference>>,
 }
 
-const HEADER_COLOR: Colour = RGB(26, 159, 160);
-const PHONETIC_COLOR: Colour = RGB(220, 186, 40);
-const REFERENCE_COLOR: Colour = RGB(138, 88, 164);
-
-impl Display for Reference {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let mut content = String::new();
-        let sub_str_count = self.contents.len();
-
-        for (index, str) in self.contents.iter().enumerate() {
-            content.push_str(str);
-
-            if index < sub_str_count - 1 {
-                content.push_str("; ")
+impl YDCVFormatter for Translation {
+    fn translation_description(&self) -> String {
+        let yellow_star = Colour::Yellow.paint("*");
+        let mut header_str = String::new();
+        if let Some(ref translations) = self.translation {
+            header_str.push_str(&format!("  {}\n\t{} ", Colour::Purple.paint("Translation:"), yellow_star));
+            for (idx, value) in translations.iter().enumerate() {
+                header_str.push_str(&value);
+                if idx == translations.len() - 1 {
+                    header_str.push_str("\n");
+                } else {
+                    header_str.push_str("; ");
+                }
             }
         }
 
-        write!(f, "\n\t* {}\n\t  {}", self.key, REFERENCE_COLOR.paint(content))
-    }
-}
-
-impl Display for Basic {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let mut tmp_str = String::new();
-
-        if let Some(ref phone) = self.phonetic {
-            tmp_str = format!("\t[{}]\n", PHONETIC_COLOR.paint(phone.clone()));
-        }
-
-        if let (Some(uk), Some(us)) = (self.uk_phonetic.clone(), self.us_phonetic.clone()) {
-            tmp_str = format!("\tUK: [{}] US: [{}]\n", PHONETIC_COLOR.paint(uk), PHONETIC_COLOR.paint(us));
-        }
-
-        write!(f, "{}\n  {}:{}",
-               tmp_str, HEADER_COLOR.paint("Word Explanation"), self.explains
-               .iter()
-               .fold(String::new(), |mut acc, ref x| {
-                   acc.push_str(format!("\n\t* {}", x).as_str());
-                   acc
-               }))
-    }
-}
-
-impl Display for Translation {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        let tmp_trans = match self.translation {
-            Some(ref trans) => format!("\n  {}\n\t* {}", HEADER_COLOR.paint("Translation:"), trans.first().expect("")),
-            None => String::new(),
-        };
-
-        let tmp_basic = match self.basic {
-            Some(ref bsc) => format!("\n{}\n", bsc),
-            None => String::new(),
-        };
-
-        let tmp_web = match self.web {
-            Some(ref vecs) => {
-                let content = vecs.iter()
-                    .fold(String::new(), |mut acc, ref x| {
-                        acc.push_str(format!("{}", x).as_str());
-                        acc
-                    });
-                format!("\n  {}:{}", HEADER_COLOR.paint("Web Reference"), content)
+        let mut phonetic_str = String::new();
+        if let Some(ref phonetic_basic) = self.basic {
+            phonetic_str.push_str(&format!("  {}\n", Colour::Purple.paint("Word Explanation")));
+            if let Some(ref uk_phonetic) = phonetic_basic.uk_phonetic {
+                phonetic_str.push_str(&format!("\tUK: [{}]", Style::new().underline().paint(uk_phonetic.as_str())));
+                if let Some(ref us_phonetic) = phonetic_basic.us_phonetic {
+                    phonetic_str.push_str(&format!(" US: [{}]\n", Style::new().underline().paint(us_phonetic.as_str())));
+                };
+            } else {
+                if let Some(ref us_phonetic) = phonetic_basic.us_phonetic {
+                    phonetic_str.push_str(&format!("\tUS: [{}]\n", Style::new().underline().paint(us_phonetic.as_str())));
+                }
             }
-            None => String::new(),
-        };
 
-        write!(f, "{}:{}{}{}",
-               Style::new().underline().paint(self.query.clone()), tmp_trans, tmp_basic, tmp_web)
+            for explain in &phonetic_basic.explains {
+                phonetic_str.push_str(&format!("\t{} {}\n", yellow_star, explain));
+            }
+        }
+
+        let mut reference_str = String::new();
+        if let Some(ref web_ref) = self.web {
+            reference_str.push_str(&format!("  {}\n", Colour::Purple.paint("Web Reference:")));
+            for web in web_ref {
+                reference_str.push_str(&format!("\t{} {}\n\t  ", yellow_star, web.key));
+                for (idx, value) in web.contents.iter().enumerate() {
+                    reference_str.push_str(&value);
+                    if idx != web.contents.len() - 1 {
+                        reference_str.push_str("; ");
+                    } else {
+                        reference_str.push_str("\n");
+                    }
+                }
+            }
+        }
+
+        if !header_str.is_empty() {
+            header_str.push_str("\n");
+        }
+        header_str.push_str(&phonetic_str);
+        if !reference_str.is_empty() {
+            header_str.push_str("\n");
+        }
+        header_str.push_str(&reference_str);
+        header_str
     }
 }

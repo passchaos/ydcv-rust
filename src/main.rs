@@ -18,6 +18,7 @@ extern crate slog_term;
 // extern crate slog_scope;
 extern crate slog_envlogger;
 
+mod formatter;
 mod trans_type;
 
 use std::io::{self, Read};
@@ -34,6 +35,8 @@ use std::str;
 use rocksdb::DB;
 use rocksdb::WriteBatch;
 
+use formatter::YDCVFormatter;
+
 const REQUEST_BASE: &'static str = "http://fanyi.youdao.com/openapi.do?keyfrom=ydcv-rust&key=379421805&type=data&doctype=json&version=1.1&q=";
 
 fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, logger: &slog::Logger) -> Result<String, YDCVError> {
@@ -48,7 +51,7 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, l
     let mut res = try!(client.get(&request_url).header(Connection::close()).send());
 
     let mut body = String::new();
-    try!(res.read_to_string(&mut body));
+    res.read_to_string(&mut body)?;
 
     slog_debug!(logger, "json content: {}", body);
 
@@ -58,14 +61,14 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, l
         slog_debug!(logger, "更新本地缓存");
         let mut batch = WriteBatch::default();
         batch.delete(query.as_bytes());
-        batch.put(query.as_bytes(), format!("{}", trans_result).as_bytes());
+        batch.put(query.as_bytes(), trans_result.translation_description().as_bytes());
         cache_db.write(batch);
     } else {
         slog_debug!(logger, "写入本地缓存");
-        try!(cache_db.put(query.as_bytes(), format!("{}", trans_result).as_bytes()));
+        cache_db.put(query.as_bytes(), trans_result.translation_description().as_bytes())?;
     }
 
-    Ok(format!("{}", trans_result))
+    Ok(trans_result.translation_description())
 }
 
 fn main() {
@@ -74,7 +77,7 @@ fn main() {
     let root_log = slog::Logger::root(drain, o!("version" => "0.2"));
 
     let matches = App::new("YDCV")
-        .version("0.2")
+        .version("0.3.0")
         .author("Greedwolf DSS <greedwolf.dss@gmail.com>")
         .about("Consolve version of Youdao")
         .arg(Arg::with_name("update").short("u").long("update").help("Update local cached word"))
@@ -95,7 +98,7 @@ fn main() {
     }) {
         Some(path) => path,
         None => {
-            println!("没有缓存路径");
+            slog_error!(root_log, "没有缓存路径");
             return;
         },
     };
@@ -104,7 +107,7 @@ fn main() {
     let db = match DB::open_default(cache_path.as_str()) {
         Ok(db) => db,
         Err(err) => {
-            println!("无法创建RocksDB的存储目录 error: {}", err);
+            slog_error!(root_log, "无法创建RocksDB的存储目录 error: {}", err);
             return;
         }
     };

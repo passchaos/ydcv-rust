@@ -38,13 +38,15 @@ pub struct Translation<'a> {
 impl<'a> YDCVFormatter for Translation<'a> {
     fn translation_description(&self) -> String {
         let yellow_star = Colour::Yellow.paint("*");
+        let colour_purple = Colour::Purple;
+        let style_underline = Style::new().underline();
 
         if let Some(ref logger) = self.logger {
             slog_info!(logger, "yellow_star: {}", yellow_star);
         };
         let mut header_str = String::new();
         if let Some(ref translations) = self.translation {
-            header_str.push_str(&format!("  {}\n\t{} ", Colour::Purple.paint("Translation:"), yellow_star));
+            header_str.push_str(&format!("  {}\n\t{} ", colour_purple.paint("Translation:"), yellow_star));
             if let Some(ref logger) = self.logger {
                 slog_info!(logger, "current header_str: {}", header_str);
             };
@@ -60,15 +62,15 @@ impl<'a> YDCVFormatter for Translation<'a> {
 
         let mut phonetic_str = String::new();
         if let Some(ref phonetic_basic) = self.basic {
-            phonetic_str.push_str(&format!("  {}\n", Colour::Purple.paint("Word Explanation")));
+            phonetic_str.push_str(&format!("  {}\n", colour_purple.paint("Word Explanation")));
             if let Some(ref uk_phonetic) = phonetic_basic.uk_phonetic {
-                phonetic_str.push_str(&format!("\tUK: [{}]", Style::new().underline().paint(uk_phonetic.as_str())));
+                phonetic_str.push_str(&format!("\tUK: [{}]", style_underline.paint(uk_phonetic.as_str())));
                 if let Some(ref us_phonetic) = phonetic_basic.us_phonetic {
-                    phonetic_str.push_str(&format!(" US: [{}]\n", Style::new().underline().paint(us_phonetic.as_str())));
+                    phonetic_str.push_str(&format!(" US: [{}]\n", style_underline.paint(us_phonetic.as_str())));
                 };
             } else {
                 if let Some(ref us_phonetic) = phonetic_basic.us_phonetic {
-                    phonetic_str.push_str(&format!("\tUS: [{}]\n", Style::new().underline().paint(us_phonetic.as_str())));
+                    phonetic_str.push_str(&format!("\tUS: [{}]\n", style_underline.paint(us_phonetic.as_str())));
                 }
             }
 
@@ -79,7 +81,7 @@ impl<'a> YDCVFormatter for Translation<'a> {
 
         let mut reference_str = String::new();
         if let Some(ref web_ref) = self.web {
-            reference_str.push_str(&format!("  {}\n", Colour::Purple.paint("Web Reference:")));
+            reference_str.push_str(&format!("  {}\n", colour_purple.paint("Web Reference:")));
             for web in web_ref {
                 reference_str.push_str(&format!("\t{} {}\n\t  ", yellow_star, web.key));
                 for (idx, value) in web.contents.iter().enumerate() {

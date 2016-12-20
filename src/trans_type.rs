@@ -1,13 +1,9 @@
-use std::fmt::{self, Formatter, Display};
-
-use ansi_term::Colour::{self, RGB};
+use ansi_term::Colour;
 use ansi_term::Style;
 
 use formatter::YDCVFormatter;
 
 use slog;
-use slog::DrainExt;
-use slog_term;
 
 #[derive(Debug, Deserialize)]
 struct Basic {
@@ -42,13 +38,13 @@ impl<'a> YDCVFormatter for Translation<'a> {
         let style_underline = Style::new().underline();
 
         if let Some(ref logger) = self.logger {
-            slog_info!(logger, "yellow_star: {}", yellow_star);
+            slog_info!(logger, "yellow_star: {:?}", yellow_star);
         };
         let mut header_str = String::new();
         if let Some(ref translations) = self.translation {
             header_str.push_str(&format!("  {}\n\t{} ", colour_purple.paint("Translation:"), yellow_star));
             if let Some(ref logger) = self.logger {
-                slog_info!(logger, "current header_str: {}", header_str);
+                slog_info!(logger, "current header_str: {:?}", header_str);
             };
             for (idx, value) in translations.iter().enumerate() {
                 header_str.push_str(&value);

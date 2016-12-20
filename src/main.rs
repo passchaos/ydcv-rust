@@ -61,9 +61,9 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, l
     if update_cache {
         slog_debug!(logger, "更新本地缓存");
         let mut batch = WriteBatch::default();
-        batch.delete(query.as_bytes());
-        batch.put(query.as_bytes(), trans_result.translation_description().as_bytes());
-        cache_db.write(batch);
+        batch.delete(query.as_bytes())?;
+        batch.put(query.as_bytes(), trans_result.translation_description().as_bytes())?;
+        cache_db.write(batch)?;
     } else {
         slog_debug!(logger, "写入本地缓存");
         cache_db.put(query.as_bytes(), trans_result.translation_description().as_bytes())?;
@@ -80,7 +80,7 @@ fn main() {
     let matches = App::new("YDCV")
         .version("0.3.0")
         .author("Greedwolf DSS <greedwolf.dss@gmail.com>")
-        .about("Consolve version of Youdao")
+        .about("Consolve version of Youdao Dict")
         .arg(Arg::with_name("update").short("u").long("update").help("Update local cached word"))
         .arg(Arg::with_name("INPUT").required(true).index(1))
         .get_matches();

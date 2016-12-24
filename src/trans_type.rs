@@ -40,9 +40,10 @@ impl<'a> YDCVFormatter for Translation<'a> {
         if let Some(ref logger) = self.logger {
             slog_info!(logger, "yellow_star: {:?}", yellow_star);
         };
+
         let mut header_str = String::new();
         if let Some(ref translations) = self.translation {
-            header_str.push_str(&format!("  {}\n\t{} ", colour_purple.paint("Translation:"), yellow_star));
+            header_str.push_str(&format!("{}\n  {}\n\t{} ", style_underline.paint(self.query.as_str()), colour_purple.paint("Translation:"), yellow_star));
             if let Some(ref logger) = self.logger {
                 slog_info!(logger, "current header_str: {:?}", header_str);
             };
@@ -91,6 +92,10 @@ impl<'a> YDCVFormatter for Translation<'a> {
             }
         }
 
+        let mut online_str = String::new();
+        online_str.push_str(&format!("\n  {}", colour_purple.paint("Online Resource:")));
+        online_str.push_str(&format!("\n\t*  {}{}\n", style_underline.paint("http://www.ldoceonline.com/search/?q="), style_underline.paint(self.query.as_str())));
+
         if !header_str.is_empty() {
             header_str.push_str("\n");
         }
@@ -99,6 +104,7 @@ impl<'a> YDCVFormatter for Translation<'a> {
             header_str.push_str("\n");
         }
         header_str.push_str(&reference_str);
+        header_str.push_str(&online_str);
         header_str
     }
 }

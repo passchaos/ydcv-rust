@@ -48,14 +48,14 @@ fn get_remote_json_translation(query: &str, cache_db: &DB, update_cache: bool, l
 
     slog_debug!(logger, "开始从网络获取翻译结果");
 
-    let mut res = try!(client.get(&request_url).header(Connection::close()).send());
+    let mut res = client.get(&request_url).header(Connection::close()).send()?;
 
     let mut body = String::new();
     res.read_to_string(&mut body)?;
 
     slog_debug!(logger, "json content: {}", body);
 
-    let mut trans_result: trans_type::Translation = try!(serde_json::from_str(body.as_str()));
+    let mut trans_result: trans_type::Translation = serde_json::from_str(body.as_str())?;
     trans_result.logger = Some(logger);
 
     if update_cache {

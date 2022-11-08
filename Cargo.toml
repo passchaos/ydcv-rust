@@ -1,17 +1,20 @@
 [package]
 name = "ydcv"
 version = "0.3.0"
+edition = "2021"
 authors = ["passchaos"]
 
 [dependencies]
-hyper = "*"
 serde = "*"
 serde_json = "*"
 serde_derive = "*"
 ansi_term = "*"
-rocksdb = "*"
-slog = "*"
-slog-envlogger = "*"
-slog-term = "*"
-slog-scope = "*"
-clap = "*"
+redb = "0.9.0"
+reqwest = { version = "0.11.12", features = ["rustls-tls", "json"] }
+tracing-subscriber = "0.3.16"
+anyhow = "1.0.66"
+dirs = "4.0.0"
+tokio = { version = "1.21.2", features = ["full"] }
+tracing = "0.1.37"
+termcolor = "1.1.3"
+clap = { version = "4.0.22", features = ["derive"] }

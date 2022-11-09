@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use redb::{Database, TableDefinition};
 use serde_derive::Deserialize;
@@ -146,7 +146,10 @@ async fn main() -> Result<()> {
 
     let resp = client.get(url).send().await?.text().await?;
 
-    let resp: YdcvResp = serde_json::from_str(&resp)?;
+    let resp: YdcvResp = serde_json::from_str(&resp).context(format!(
+        "parse resp to json meet failure: raw_resp= {}",
+        resp
+    ))?;
 
     let res = resp.colorized()?;
     println!("{}", res);

@@ -119,7 +119,7 @@ fn save_dict_info(query: &str, result: &str) -> Result<()> {
         return Ok(());
     };
 
-    dir.push("proliferation/dict");
+    dir.push("proliferation/english");
 
     if !dir.exists() {
         std::fs::create_dir_all(&dir)?;

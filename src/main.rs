@@ -40,7 +40,7 @@ struct YdcvResp {
     query: String,
     translation: Vec<String>,
     basic: Basic,
-    web: Vec<Kv>,
+    web: Option<Vec<Kv>>,
 }
 
 impl YdcvResp {
@@ -84,21 +84,23 @@ impl YdcvResp {
             write!(f, "    * {}\n", i)?;
         }
 
-        f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Cyan)))?;
-        write!(f, "\n  Web Reference:")?;
-        f.reset()?;
-
-        for Kv { key, value } in &self.web {
-            write!(f, "\n    * ")?;
-
-            f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Yellow)))?;
-            write!(f, "{key}\n")?;
+        if let Some(web) = &self.web {
+            f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Cyan)))?;
+            write!(f, "\n  Web Reference:")?;
             f.reset()?;
 
-            let v = value.join(",");
-            f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Magenta)))?;
-            write!(f, "       {v}")?;
-            f.reset()?;
+            for Kv { key, value } in web {
+                write!(f, "\n    * ")?;
+
+                f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Yellow)))?;
+                write!(f, "{key}\n")?;
+                f.reset()?;
+
+                let v = value.join(",");
+                f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Magenta)))?;
+                write!(f, "       {v}")?;
+                f.reset()?;
+            }
         }
 
         String::from_utf8(f.into_inner()).map_err(From::from)

@@ -9,11 +9,23 @@ use termcolor::{Buffer, ColorSpec, WriteColor};
 const REQUEST_BASE: &'static str = "http://fanyi.youdao.com/openapi.do?keyfrom=ydcv-rust&key=379421805&type=data&doctype=json&version=1.1&q=";
 
 #[derive(Debug, Deserialize)]
-struct Phonetic {
-    #[serde(rename = "us-phonetic")]
-    us: String,
-    #[serde(rename = "uk-phonetic")]
-    uk: String,
+#[serde(untagged)]
+enum Phonetic {
+    En2Zh {
+        #[serde(rename = "us-phonetic")]
+        us: String,
+        #[serde(rename = "uk-phonetic")]
+        uk: String,
+    },
+    Zh2En {
+        phonetic: String,
+    },
+}
+
+#[derive(Debug, Deserialize)]
+struct Basic {
+    #[serde(flatten)]
+    phonetic: Phonetic,
     explains: Vec<String>,
 }
 
@@ -27,7 +39,7 @@ struct Kv {
 struct YdcvResp {
     query: String,
     translation: Vec<String>,
-    basic: Phonetic,
+    basic: Basic,
     web: Vec<Kv>,
 }
 
@@ -41,12 +53,23 @@ impl YdcvResp {
 
         f.reset().unwrap();
 
-        for (k, v) in [("us", &self.basic.us), ("uk", &self.basic.uk)] {
-            write!(f, " {k}: [")?;
-            f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Yellow)))?;
-            write!(f, "{}", v)?;
-            f.reset()?;
-            write!(f, "]")?;
+        match &self.basic.phonetic {
+            Phonetic::En2Zh { us, uk } => {
+                for (k, v) in [("us", us), ("uk", uk)] {
+                    write!(f, " {k}: [")?;
+                    f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Yellow)))?;
+                    write!(f, "{v}")?;
+                    f.reset()?;
+                    write!(f, "]")?;
+                }
+            }
+            Phonetic::Zh2En { phonetic } => {
+                write!(f, " [")?;
+                f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Yellow)))?;
+                write!(f, " {phonetic} ")?;
+                f.reset()?;
+                write!(f, "]")?;
+            }
         }
 
         for i in &self.translation {
@@ -116,13 +139,14 @@ fn save_dict_info(query: &str, result: &str) -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-
     let args = Args::parse();
 
     let client = reqwest::Client::new();
     let url = format!("{REQUEST_BASE}{}", args.word);
-    let resp: YdcvResp = client.get(url).send().await?.json().await?;
+
+    let resp = client.get(url).send().await?.text().await?;
+
+    let resp: YdcvResp = serde_json::from_str(&resp)?;
 
     let res = resp.colorized()?;
     println!("{}", res);

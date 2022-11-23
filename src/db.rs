@@ -31,7 +31,16 @@ fn get_value(key: &str) -> Result<Option<String>> {
     let db = get_db()?;
 
     let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(TABLE)?;
+    let table = match read_txn.open_table(TABLE) {
+        Ok(t) => t,
+        Err(e) => match e {
+            redb::Error::TableDoesNotExist(msg) => {
+                eprintln!("table: {msg} not exist");
+                return Ok(None);
+            }
+            _ => return Err(e.into()),
+        },
+    };
 
     let v = table.get(key)?;
 

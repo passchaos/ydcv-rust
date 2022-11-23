@@ -24,8 +24,9 @@ enum Phonetic {
 
 #[derive(Debug, Deserialize)]
 struct Basic {
+    // 有些查询没有这个字段，比如 `cli`
     #[serde(flatten)]
-    phonetic: Phonetic,
+    phonetic: Option<Phonetic>,
     explains: Vec<String>,
 }
 
@@ -54,7 +55,7 @@ impl YdcvResp {
         f.reset().unwrap();
 
         match &self.basic.phonetic {
-            Phonetic::En2Zh { us, uk } => {
+            Some(Phonetic::En2Zh { us, uk }) => {
                 for (k, v) in [("us", us), ("uk", uk)] {
                     write!(f, " {k}: [")?;
                     f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Yellow)))?;
@@ -63,13 +64,14 @@ impl YdcvResp {
                     write!(f, "]")?;
                 }
             }
-            Phonetic::Zh2En { phonetic } => {
+            Some(Phonetic::Zh2En { phonetic }) => {
                 write!(f, " [")?;
                 f.set_color(ColorSpec::new().set_fg(Some(termcolor::Color::Yellow)))?;
                 write!(f, " {phonetic} ")?;
                 f.reset()?;
                 write!(f, "]")?;
             }
+            None => {}
         }
 
         for i in &self.translation {

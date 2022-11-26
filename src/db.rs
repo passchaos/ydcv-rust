@@ -59,12 +59,12 @@ fn insert_value(key: &str, value: &str) -> Result<()> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Answer {
-    explain: String,
-    query_count: u64,
+pub struct Answer {
+    pub explain: String,
+    pub query_count: u64,
 }
 
-pub fn save_query_explain(query: &str, explain: String) -> Result<()> {
+pub fn save_query_explain(query: &str, explain: String) -> Result<Answer> {
     let saved_answer = get_value(query)?;
 
     let query_count = if let Some(answer) = saved_answer {
@@ -75,8 +75,6 @@ pub fn save_query_explain(query: &str, explain: String) -> Result<()> {
         1
     };
 
-    println!("query count: {query_count}\n\n{explain}");
-
     let answer = Answer {
         explain,
         query_count,
@@ -84,5 +82,5 @@ pub fn save_query_explain(query: &str, explain: String) -> Result<()> {
 
     insert_value(query, &serde_json::to_string(&answer)?)?;
 
-    Ok(())
+    Ok(answer)
 }

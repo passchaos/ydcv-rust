@@ -22,7 +22,7 @@ fn get_selected_text(clip: &mut Clipboard) -> Option<String> {
 
     g.text()
         .map_err(|e| {
-            eprintln!("get primary clipboard meet failure: err= {e}");
+            // eprintln!("get primary clipboard meet failure: err= {e}");
             e
         })
         .ok()
@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
                 initial_clip_content = new_clip_content.clone();
 
                 if let Some(text) = new_clip_content {
-                    match lookup(text).await {
+                    match lookup(text.clone()).await {
                         Ok(Answer {
                             explain,
                             query_count,
@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
                             println!("query count: {query_count}\n\n{explain}\n\n");
                         }
                         Err(e) => {
-                            eprintln!("lookup meet failure: err= {e}");
+                            eprintln!("lookup meet failure: content= {text} err= {e}");
                         }
                     }
                 }

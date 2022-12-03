@@ -1,30 +1,25 @@
 use anyhow::bail;
 use anyhow::Result;
-use once_cell::sync::OnceCell;
 use redb::{Database, ReadableTable, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
 
 const TABLE: TableDefinition<str, str> = TableDefinition::new("ydcv");
-fn get_db<'a>() -> Result<&'a Database> {
-    static DB: OnceCell<Database> = OnceCell::new();
+fn get_db() -> Result<Database> {
+    let Some(mut dir) = dirs::home_dir() else {
+        bail!("no home dir found");
+    };
 
-    DB.get_or_try_init(|| {
-        let Some(mut dir) = dirs::home_dir() else {
-            bail!("no home dir found");
-        };
+    dir.push("proliferation/english");
 
-        dir.push("proliferation/english");
+    if !dir.exists() {
+        std::fs::create_dir_all(&dir)?;
+    }
 
-        if !dir.exists() {
-            std::fs::create_dir_all(&dir)?;
-        }
+    dir.push("ydcv.redb");
 
-        dir.push("ydcv.redb");
+    let db = unsafe { Database::create(dir, 1024 * 1024)? };
 
-        let db = unsafe { Database::create(dir, 1024 * 1024)? };
-
-        Ok(db)
-    })
+    Ok(db)
 }
 
 fn get_value(key: &str) -> Result<Option<String>> {
@@ -48,7 +43,8 @@ fn get_value(key: &str) -> Result<Option<String>> {
 }
 
 fn insert_value(key: &str, value: &str) -> Result<()> {
-    let write_txn = get_db()?.begin_write()?;
+    let db = get_db()?;
+    let write_txn = db.begin_write()?;
     {
         let mut table = write_txn.open_table(TABLE)?;
         table.insert(key, value)?;
@@ -64,23 +60,54 @@ pub struct Answer {
     pub query_count: u64,
 }
 
-pub fn save_query_explain(query: &str, explain: String) -> Result<Answer> {
+pub fn get_saved_answer(query: &str) -> Result<Option<Answer>> {
     let saved_answer = get_value(query)?;
 
-    let query_count = if let Some(answer) = saved_answer {
+    let res = if let Some(answer) = saved_answer {
         let answer: Answer = serde_json::from_str(&answer)?;
 
-        answer.query_count + 1
+        Some(answer)
     } else {
-        1
+        None
     };
 
-    let answer = Answer {
+    Ok(res)
+}
+
+pub fn step_forward_with_web_result(query: &str, explain: String) -> Result<Answer> {
+    let saved_answer = get_saved_answer(query)?;
+
+    let (explain, query_count) = match saved_answer {
+        Some(a) => (explain, a.query_count + 1),
+        None => (explain, 1),
+    };
+
+    let new_answer = Answer {
         explain,
         query_count,
     };
 
-    insert_value(query, &serde_json::to_string(&answer)?)?;
+    insert_value(query, &serde_json::to_string(&new_answer)?)?;
 
-    Ok(answer)
+    Ok(new_answer)
+}
+
+pub fn step_forward_with_local_only(query: &str) -> Result<Option<Answer>> {
+    let saved_answer = get_saved_answer(query)?;
+
+    let (explain, query_count) = match saved_answer {
+        Some(a) => (a.explain, a.query_count + 1),
+        None => {
+            return Ok(None);
+        }
+    };
+
+    let new_answer = Answer {
+        explain,
+        query_count,
+    };
+
+    insert_value(query, &serde_json::to_string(&new_answer)?)?;
+
+    Ok(Some(new_answer))
 }

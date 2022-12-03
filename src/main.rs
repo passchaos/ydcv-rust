@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::{bail, Context, Result};
 use arboard::{Clipboard, GetExtLinux};
 use clap::Parser;
@@ -28,65 +30,91 @@ fn get_selected_text(clip: &mut Clipboard) -> Option<String> {
         .ok()
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let args = Args::parse();
 
-    if args.daemon_mode {
-        let mut clip = Clipboard::new()?;
+    let fut = async {
+        if args.daemon_mode {
+            let mut clip = Clipboard::new()?;
 
-        let mut initial_clip_content = get_selected_text(&mut clip);
+            let mut initial_clip_content = get_selected_text(&mut clip);
 
-        loop {
-            let new_clip_content = get_selected_text(&mut clip);
+            loop {
+                let new_clip_content = get_selected_text(&mut clip);
 
-            if new_clip_content != initial_clip_content {
-                initial_clip_content = new_clip_content.clone();
+                if new_clip_content != initial_clip_content {
+                    initial_clip_content = new_clip_content.clone();
 
-                if let Some(text) = new_clip_content {
-                    match lookup(text.clone()).await {
-                        Ok(Answer {
-                            explain,
-                            query_count,
-                        }) => {
-                            println!("query count: {query_count}\n\n{explain}\n\n");
-                        }
-                        Err(e) => {
+                    if let Some(text) = new_clip_content {
+                        if let Err(e) = lookup(text.clone()).await {
                             eprintln!("lookup meet failure: content= {text} err= {e}");
                         }
                     }
                 }
+
+                std::thread::sleep(std::time::Duration::from_secs(1));
             }
+        } else {
+            let Some(word) = args.word else {
+                bail!("no word specified");
+            };
 
-            std::thread::sleep(std::time::Duration::from_secs(1));
+            lookup(word).await?;
         }
-    } else {
-        let Some(word) = args.word else {
-            bail!("no word specified");
-        };
 
-        let Answer {
-            explain,
-            query_count,
-        } = lookup(word).await?;
-        println!("query count: {query_count}\n\n{explain}");
-    }
+        Ok::<_, anyhow::Error>(())
+    };
+
+    let runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(fut)?;
 
     Ok(())
 }
 
-async fn lookup(word: String) -> Result<Answer> {
+async fn lookup(word: String) -> Result<()> {
     let client = reqwest::Client::new();
     let url = format!("{REQUEST_BASE}{}", word);
 
-    let resp = client.get(url).send().await?.text().await?;
+    let web_explain_action = async {
+        let resp = client
+            .get(url)
+            .timeout(Duration::from_secs(1))
+            .send()
+            .await?
+            .text()
+            .await?;
 
-    let resp: YdcvResp = serde_json::from_str(&resp).context(format!(
-        "parse resp to json meet failure: raw_resp= {}",
-        resp
-    ))?;
+        let resp: YdcvResp = serde_json::from_str(&resp).context(format!(
+            "parse resp to json meet failure: raw_resp= {}",
+            resp
+        ))?;
 
-    let res = resp.colorized()?;
+        let res = resp.colorized()?;
 
-    db::save_query_explain(&word, res).map_err(From::from)
+        Ok::<_, anyhow::Error>(res)
+    };
+
+    match web_explain_action.await {
+        Ok(res) => {
+            let Answer {
+                explain,
+                query_count,
+            } = db::step_forward_with_web_result(&word, res)?;
+
+            println!("query count: {query_count}\nweb result:\n\n{explain}");
+        }
+        Err(e) => {
+            if let Some(Answer {
+                explain,
+                query_count,
+            }) = db::step_forward_with_local_only(&word)?
+            {
+                println!("query count: {query_count}\nlocal result:\n\n{explain}");
+            } else {
+                bail!("no explain found: query= {word} query_err= {e}");
+            }
+        }
+    }
+
+    Ok(())
 }

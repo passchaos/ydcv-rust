@@ -22,12 +22,18 @@ fn get_selected_text(clip: &mut Clipboard) -> Option<String> {
     let g = clip.get();
     let g = g.clipboard(arboard::LinuxClipboardKind::Primary);
 
-    g.text()
-        .map_err(|e| {
-            // eprintln!("get primary clipboard meet failure: err= {e}");
-            e
-        })
-        .ok()
+    g.text().ok()
+}
+
+fn get_copied_text(clip: &mut Clipboard) -> Option<String> {
+    let g = clip.get();
+    let g = g.clipboard(arboard::LinuxClipboardKind::Clipboard);
+
+    g.text().ok()
+}
+
+fn get_clipboard_content(clip: &mut Clipboard) -> Option<String> {
+    get_copied_text(clip).or_else(|| get_selected_text(clip))
 }
 
 fn main() -> Result<()> {
@@ -37,10 +43,10 @@ fn main() -> Result<()> {
         if args.daemon_mode {
             let mut clip = Clipboard::new()?;
 
-            let mut initial_clip_content = get_selected_text(&mut clip);
+            let mut initial_clip_content = get_clipboard_content(&mut clip);
 
             loop {
-                let new_clip_content = get_selected_text(&mut clip);
+                let new_clip_content = get_clipboard_content(&mut clip);
 
                 if new_clip_content != initial_clip_content {
                     initial_clip_content = new_clip_content.clone();

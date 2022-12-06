@@ -46,31 +46,23 @@ fn get_clipboard_content(clip: &mut Clipboard) -> Option<String> {
     let copied_text = get_copied_text(clip);
     let selected_text = get_selected_text(clip);
 
-    let changed_copied_content = if let Some(copied_text) = copied_text {
+    if let Some(copied_text) = copied_text {
         if CACHED_CONTENT.read().0.as_ref() != Some(&copied_text) {
             CACHED_CONTENT.write().0 = Some(copied_text.clone());
 
-            Some(copied_text)
-        } else {
-            None
+            return Some(copied_text);
         }
-    } else {
-        None
-    };
+    }
 
-    let changed_selected_content = if let Some(selected_text) = selected_text {
+    if let Some(selected_text) = selected_text {
         if CACHED_CONTENT.read().1.as_ref() != Some(&selected_text) {
             CACHED_CONTENT.write().1 = Some(selected_text.clone());
 
             Some(selected_text)
-        } else {
-            None
         }
-    } else {
-        None
-    };
+    }
 
-    changed_copied_content.or(changed_selected_content)
+    None
 }
 
 fn main() -> Result<()> {

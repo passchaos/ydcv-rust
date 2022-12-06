@@ -1,11 +1,18 @@
-use std::time::Duration;
+use std::{io::BufReader, path::Path, time::Duration};
 
 use anyhow::{bail, Context, Result};
 use arboard::{Clipboard, GetExtLinux};
+use chinese_detection::{classify, ClassificationResult};
 use clap::Parser;
 use db::Answer;
 use explain::YdcvResp;
+use once_cell::sync::Lazy;
 use parking_lot::RwLock;
+use reqwest::Client;
+use tempdir::TempDir;
+use tokio::io::{self};
+use tokio_stream::StreamExt;
+use tokio_util::io::StreamReader;
 
 mod db;
 mod explain;
@@ -107,8 +114,60 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+async fn tts(word: &str) -> Result<()> {
+    // type:
+    // * 为1时，是英音
+    // * 为2时，是美音
+    const URL: &str = "http://dict.youdao.com/dictvoice?type=1&audio=";
+    let client = HTTP_CLIENT.clone();
+    let url = format!("{URL}{word}");
+
+    let stream = client
+        .get(url)
+        .timeout(Duration::from_secs(1))
+        .send()
+        .await?
+        .bytes_stream()
+        .map(|r| r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
+
+    let mut reader = StreamReader::new(stream);
+
+    let tmp_dir = TempDir::new("dict_tts_uk")?;
+
+    let file_path = tmp_dir.path().join("{word}.mp3");
+
+    let mut writer = tokio::fs::File::create(&file_path).await?;
+    let data_len = io::copy_buf(&mut reader, &mut writer).await?;
+
+    println!("mp3 data len: {data_len}");
+
+    play_mp3(file_path.as_ref())?;
+
+    Ok(())
+}
+
+fn play_mp3(file_path: &Path) -> Result<()> {
+    let (_stream, handle) = rodio::OutputStream::try_default()?;
+    let sink = rodio::Sink::try_new(&handle)?;
+
+    let f = std::fs::File::open(file_path)?;
+    sink.append(rodio::Decoder::new_mp3(BufReader::new(f))?);
+
+    sink.sleep_until_end();
+
+    Ok(())
+}
+
+static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| Client::new());
+
 async fn lookup(word: String) -> Result<()> {
-    let client = reqwest::Client::new();
+    if classify(&word) == ClassificationResult::EN {
+        if let Err(e) = tts(&word).await {
+            eprintln!("tts meet failure: err= {e}");
+        }
+    }
+
+    let client = HTTP_CLIENT.clone();
     let url = format!("{REQUEST_BASE}{}", word);
 
     let web_explain_action = async {

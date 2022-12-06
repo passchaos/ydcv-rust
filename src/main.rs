@@ -58,7 +58,7 @@ fn get_clipboard_content(clip: &mut Clipboard) -> Option<String> {
         if CACHED_CONTENT.read().1.as_ref() != Some(&selected_text) {
             CACHED_CONTENT.write().1 = Some(selected_text.clone());
 
-            Some(selected_text)
+            return Some(selected_text);
         }
     }
 
@@ -124,9 +124,11 @@ async fn tts(word: &str) -> Result<()> {
 
     let mut reader = StreamReader::new(stream);
 
-    let tmp_dir = TempDir::new("dict_tts_uk")?;
+    // let tmp_dir = TempDir::new("dict_tts_uk")?;
+    let tts_dir = Path::new("/tmp").join("dict_tts_uk");
+    tokio::fs::create_dir_all(&tts_dir).await?;
 
-    let file_path = tmp_dir.path().join("{word}.mp3");
+    let file_path = tts_dir.join(format!("{word}.mp3"));
 
     let mut writer = tokio::fs::File::create(&file_path).await?;
     let data_len = io::copy_buf(&mut reader, &mut writer).await?;
@@ -143,7 +145,7 @@ fn play_mp3(file_path: &Path) -> Result<()> {
     let sink = rodio::Sink::try_new(&handle)?;
 
     let f = std::fs::File::open(file_path)?;
-    sink.append(rodio::Decoder::new_mp3(BufReader::new(f))?);
+    sink.append(rodio::Decoder::new(BufReader::new(f))?);
 
     sink.sleep_until_end();
 
@@ -155,7 +157,7 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| Client::new());
 async fn lookup(word: String) -> Result<()> {
     if classify(&word) == ClassificationResult::EN {
         if let Err(e) = tts(&word).await {
-            eprintln!("tts meet failure: err= {e}");
+            eprintln!("tts meet failure: err= {e} word= {word}");
         }
     }
 

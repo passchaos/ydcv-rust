@@ -9,7 +9,7 @@ use explain::YdcvResp;
 use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use reqwest::Client;
-use tempdir::TempDir;
+// use tempdir::TempDir;
 use tokio::io::{self};
 use tokio_stream::StreamExt;
 use tokio_util::io::StreamReader;
@@ -125,7 +125,11 @@ async fn tts(word: &str) -> Result<()> {
     let mut reader = StreamReader::new(stream);
 
     // let tmp_dir = TempDir::new("dict_tts_uk")?;
-    let tts_dir = Path::new("/tmp").join("dict_tts_uk");
+    let tts_dir = dirs::home_dir()
+        .ok_or_else(|| anyhow::anyhow!("can't get home dir info"))?
+        .join("dict_tts_uk");
+
+    // let tts_dir = Path::new("~/").join("dict_tts_uk");
     tokio::fs::create_dir_all(&tts_dir).await?;
 
     let file_path = tts_dir.join(format!("{word}.mp3"));
@@ -156,8 +160,10 @@ static HTTP_CLIENT: Lazy<Client> = Lazy::new(|| Client::new());
 
 async fn lookup(word: String) -> Result<()> {
     if classify(&word) == ClassificationResult::EN {
-        if let Err(e) = tts(&word).await {
-            eprintln!("tts meet failure: err= {e} word= {word}");
+        if !word.trim().contains(char::is_whitespace) {
+            if let Err(e) = tts(&word).await {
+                eprintln!("tts meet failure: err= {e} word= {word}");
+            }
         }
     }
 

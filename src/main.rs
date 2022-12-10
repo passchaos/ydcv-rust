@@ -107,23 +107,6 @@ fn main() -> Result<()> {
 }
 
 async fn tts(word: &str) -> Result<()> {
-    // type:
-    // * 为1时，是英音
-    // * 为2时，是美音
-    const URL: &str = "http://dict.youdao.com/dictvoice?type=1&audio=";
-    let client = HTTP_CLIENT.clone();
-    let url = format!("{URL}{word}");
-
-    let stream = client
-        .get(url)
-        .timeout(Duration::from_secs(1))
-        .send()
-        .await?
-        .bytes_stream()
-        .map(|r| r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
-
-    let mut reader = StreamReader::new(stream);
-
     // let tmp_dir = TempDir::new("dict_tts_uk")?;
     let tts_dir = dirs::home_dir()
         .ok_or_else(|| anyhow::anyhow!("can't get home dir info"))?
@@ -134,10 +117,29 @@ async fn tts(word: &str) -> Result<()> {
 
     let file_path = tts_dir.join(format!("{word}.mp3"));
 
-    let mut writer = tokio::fs::File::create(&file_path).await?;
-    let data_len = io::copy_buf(&mut reader, &mut writer).await?;
+    if !file_path.exists() {
+        // type:
+        // * 为1时，是英音
+        // * 为2时，是美音
+        const URL: &str = "http://dict.youdao.com/dictvoice?type=1&audio=";
+        let client = HTTP_CLIENT.clone();
+        let url = format!("{URL}{word}");
 
-    println!("mp3 data len: {data_len}");
+        let stream = client
+            .get(url)
+            .timeout(Duration::from_secs(1))
+            .send()
+            .await?
+            .bytes_stream()
+            .map(|r| r.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
+
+        let mut reader = StreamReader::new(stream);
+
+        let mut writer = tokio::fs::File::create(&file_path).await?;
+        let data_len = io::copy_buf(&mut reader, &mut writer).await?;
+
+        println!("fetched mp3 data len: {data_len}");
+    }
 
     play_mp3(file_path.as_ref())?;
 

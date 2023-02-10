@@ -1,12 +1,18 @@
 use std::{io::BufReader, path::Path, time::Duration};
 
 use anyhow::{bail, Context, Result};
-use arboard::{Clipboard, GetExtLinux};
+use arboard::Clipboard;
+
+#[cfg(target_os = "linux")]
+use arboard::GetExtLinux;
+
 use chinese_detection::{classify, ClassificationResult};
 use clap::Parser;
 use db::Answer;
 use explain::YdcvResp;
 use once_cell::sync::Lazy;
+
+#[cfg(target_os = "linux")]
 use parking_lot::RwLock;
 use reqwest::Client;
 // use tempdir::TempDir;
@@ -19,6 +25,7 @@ mod explain;
 
 const REQUEST_BASE: &'static str = "http://fanyi.youdao.com/openapi.do?keyfrom=ydcv-rust&key=379421805&type=data&doctype=json&version=1.1&q=";
 
+#[cfg(target_os = "linux")]
 static CACHED_CONTENT: RwLock<(Option<String>, Option<String>)> = RwLock::new((None, None));
 
 #[derive(Parser, Debug)]
@@ -28,6 +35,7 @@ struct Args {
     daemon_mode: bool,
 }
 
+#[cfg(target_os = "linux")]
 fn get_selected_text(clip: &mut Clipboard) -> Option<String> {
     let g = clip.get();
     let g = g.clipboard(arboard::LinuxClipboardKind::Primary);
@@ -35,6 +43,7 @@ fn get_selected_text(clip: &mut Clipboard) -> Option<String> {
     g.text().ok()
 }
 
+#[cfg(target_os = "linux")]
 fn get_copied_text(clip: &mut Clipboard) -> Option<String> {
     let g = clip.get();
     let g = g.clipboard(arboard::LinuxClipboardKind::Clipboard);
@@ -43,26 +52,29 @@ fn get_copied_text(clip: &mut Clipboard) -> Option<String> {
 }
 
 fn get_clipboard_content(clip: &mut Clipboard) -> Option<String> {
-    let copied_text = get_copied_text(clip);
-    let selected_text = get_selected_text(clip);
+    #[cfg(target_os = "linux")]
+    {
+        let copied_text = get_copied_text(clip);
+        let selected_text = get_selected_text(clip);
 
-    if let Some(copied_text) = copied_text {
-        if CACHED_CONTENT.read().0.as_ref() != Some(&copied_text) {
-            CACHED_CONTENT.write().0 = Some(copied_text.clone());
+        if let Some(copied_text) = copied_text {
+            if CACHED_CONTENT.read().0.as_ref() != Some(&copied_text) {
+                CACHED_CONTENT.write().0 = Some(copied_text.clone());
 
-            return Some(copied_text);
+                return Some(copied_text);
+            }
+        }
+
+        if let Some(selected_text) = selected_text {
+            if CACHED_CONTENT.read().1.as_ref() != Some(&selected_text) {
+                CACHED_CONTENT.write().1 = Some(selected_text.clone());
+
+                return Some(selected_text);
+            }
         }
     }
 
-    if let Some(selected_text) = selected_text {
-        if CACHED_CONTENT.read().1.as_ref() != Some(&selected_text) {
-            CACHED_CONTENT.write().1 = Some(selected_text.clone());
-
-            return Some(selected_text);
-        }
-    }
-
-    None
+    clip.get_text().ok()
 }
 
 fn main() -> Result<()> {

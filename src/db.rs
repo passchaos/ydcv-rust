@@ -2,8 +2,7 @@ use anyhow::bail;
 use anyhow::Result;
 use redb::{Database, ReadableTable, TableDefinition};
 use serde_derive::{Deserialize, Serialize};
-
-const TABLE: TableDefinition<str, str> = TableDefinition::new("ydcv");
+const TABLE: TableDefinition<&str, &str> = TableDefinition::new("ydcv");
 fn get_db() -> Result<Database> {
     let Some(mut dir) = dirs::home_dir() else {
         bail!("no home dir found");
@@ -17,7 +16,7 @@ fn get_db() -> Result<Database> {
 
     dir.push("ydcv.redb");
 
-    let db = unsafe { Database::create(dir, 1024 * 1024)? };
+    let db = Database::create(dir)?;
 
     Ok(db)
 }
@@ -29,7 +28,7 @@ fn get_value(key: &str) -> Result<Option<String>> {
     let table = match read_txn.open_table(TABLE) {
         Ok(t) => t,
         Err(e) => match e {
-            redb::Error::TableDoesNotExist(msg) => {
+            redb::TableError::TableDoesNotExist(msg) => {
                 eprintln!("table: {msg} not exist");
                 return Ok(None);
             }
@@ -39,7 +38,7 @@ fn get_value(key: &str) -> Result<Option<String>> {
 
     let v = table.get(key)?;
 
-    Ok(v.map(|s| s.to_string()))
+    Ok(v.map(|s| s.value().to_string()))
 }
 
 fn insert_value(key: &str, value: &str) -> Result<()> {
